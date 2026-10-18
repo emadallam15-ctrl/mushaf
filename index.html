@@ -24,7 +24,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #wrap.arm{touch-action:none;cursor:crosshair;outline:3px dashed #e0a800;outline-offset:-3px}
 #panel{position:fixed;top:48px;left:0;right:0;bottom:0;background:var(--bg);z-index:5;display:none;flex-direction:column}
 #tabs{display:flex;background:#e4dcc6}
-#tabs button{flex:1;padding:11px 1px;border:0;background:none;font-size:14px;cursor:pointer}
+#tabs button{flex:1;padding:11px 0;border:0;background:none;font-size:12.5px;cursor:pointer}
 #tabs button.on{background:var(--g);color:#fff}
 #body{flex:1;overflow:auto;padding:10px}
 #q,#pg{width:100%;font-size:18px;padding:10px;border:2px solid var(--g);border-radius:10px;margin-bottom:10px}
@@ -52,7 +52,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 </div>
 <div id="view"><div id="wrap"><img id="im" alt=""><div id="hl"></div></div></div>
 <div id="panel">
- <div id="tabs"><button data-t="s">السور</button><button data-t="j">الأجزاء</button><button data-t="p">صفحة</button><button data-t="m">العلامات</button><button data-t="o">⚙ خيارات</button></div>
+ <div id="tabs"><button data-t="s">السور</button><button data-t="j">الأجزاء</button><button data-t="a">آية/كلمة</button><button data-t="q">الأرباع</button><button data-t="p">صفحة</button><button data-t="m">العلامات</button><button data-t="o">⚙ خيارات</button></div>
  <div id="body"></div>
 </div>
 <div id="sheet"><div id="sh"><b id="st"></b><button id="sfm" title="تصغير الخط">أ-</button><button id="sfp" title="تكبير الخط">أ+</button><button id="sprv" title="الآية السابقة">›</button><button id="snx" title="الآية التالية">‹</button><button id="sx">✕</button></div><div id="sb"></div></div>
@@ -158,6 +158,39 @@ $("sfm").onclick=()=>{S.fs=Math.max(14,S.fs-2);$("sb").style.fontSize=S.fs+"px";
 W.addEventListener("click",e=>{if(armed||!S.tf||!MM||S.page>LAST)return;const r=$("im").getBoundingClientRect();if(!r.width)return;
  const x=(e.clientX-r.left)/r.width*640,y=(e.clientY-r.top)/r.height*920;
  if(x<60||x>580||y<110||y>810)return;const i=ayahAt(S.page,x,y);if(i===null)openList(S.page);else openT(i)});
+
+/* بحث بالآية والكلمة والربع */
+let QP=null;
+function loadQ(){if(window.QD)return Promise.resolve(window.QD);
+ if(!QP)QP=new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="q.js";sc.onload=()=>ok(window.QD);sc.onerror=()=>{QP=null;no()};document.head.appendChild(sc)});return QP}
+function pageOf(i){let lo=0,hi=603;while(lo<hi){const m=(lo+hi+1)>>1;if(PSI[m]<=i)lo=m;else hi=m-1}return lo+1}
+const nq=s=>s.replace(/[ً-ْـٰ]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").replace(/ؤ/g,"و").replace(/ئ/g,"ي");
+function goAyah(i){const p=pageOf(i),[s,a]=sa(i);show(p);toast("سورة "+SN[s-1]+" — آية "+a+" — صفحة "+p)}
+const QN=["بداية الحزب","ربع الحزب","نصف الحزب","ثلاثة أرباع الحزب"];
+function renderAyahTab(B){
+ if(!MM){B.textContent="بيانات الآيات غير متاحة";return}
+ const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;margin-bottom:10px";
+ const sel=document.createElement("select");sel.style.cssText="flex:2;font-size:17px;padding:9px;border:2px solid var(--g);border-radius:10px";
+ SN.forEach((n,i)=>{const o=document.createElement("option");o.value=i+1;o.textContent=(i+1)+". "+n;sel.appendChild(o)});
+ const num=document.createElement("input");num.type="number";num.min=1;num.placeholder="رقم الآية";num.style.cssText="flex:1;min-width:0;font-size:17px;padding:9px;border:2px solid var(--g);border-radius:10px";
+ row.appendChild(sel);row.appendChild(num);B.appendChild(row);
+ const go=()=>{const s=+sel.value,c=MM.cnt[s-1],a=+num.value||1;if(a<1||a>c)return toast("سورة "+SN[s-1]+" فيها "+c+" آية");goAyah(CUM[s-1]+a-1)};
+ sel.onchange=()=>{num.max=MM.cnt[sel.value-1];num.placeholder="رقم الآية (1 – "+MM.cnt[sel.value-1]+")"};sel.onchange();
+ num.onkeydown=e=>{if(e.key=="Enter")go()};B.appendChild(item("اذهب للآية","",go));
+ const w=document.createElement("input");w.id="q";w.placeholder="ابحث بكلمة أو أكثر في القرآن…";w.style.marginTop="14px";B.appendChild(w);
+ const info=document.createElement("div");info.style.cssText="font-size:13px;color:#555;margin:0 2px 8px";B.appendChild(info);
+ const L=document.createElement("div");B.appendChild(L);
+ let tm;w.oninput=()=>{clearTimeout(tm);tm=setTimeout(doSearch,250)};
+ async function doSearch(){L.innerHTML="";const ws=nq(w.value.trim()).split(/\s+/).filter(x=>x);if(!ws.length){info.textContent="";return}
+  info.textContent="جاري البحث…";let Q;try{Q=await loadQ()}catch(e){info.textContent="تعذّر تحميل نص القرآن — يحتاج اتصالًا مرة واحدة";return}
+  if(!Q.n)Q.n=Q.t.map(nq);const res=[];
+  for(let i=0;i<6236;i++){const t=Q.n[i];let ok=true;for(const x of ws){if(!t.includes(x)){ok=false;break}}if(ok)res.push(i)}
+  info.textContent=res.length?("عدد النتائج: "+res.length+(res.length>100?" (أول 100)":"")):"لا توجد نتائج";
+  res.slice(0,100).forEach(i=>{const[s,a]=sa(i);let t=Q.t[i];if(t.length>90)t=t.slice(0,90)+"…";
+   L.appendChild(item(t,SN[s-1]+" "+a+" · ص"+pageOf(i),()=>goAyah(i)))})}}
+async function renderQuarters(B){B.textContent="جاري التحميل…";let Q;try{Q=await loadQ()}catch(e){B.textContent="تعذّر تحميل البيانات";return}
+ B.textContent="";Q.h.forEach((x,i)=>{const[s,a]=x.split(":").map(Number),idx=CUM[s-1]+a-1,j=(i>>3)+1,hz=(i>>2)+1;
+  const it=item("الجزء "+j+" — الحزب "+hz+" — "+QN[i&3],SN[s-1]+" "+a+" · ص"+pageOf(idx),()=>show(pageOf(idx)));B.appendChild(it)})}
 /* الفهرس */
 let tab="s";
 function closePanel(){$("panel").style.display="none"}
@@ -174,6 +207,8 @@ function render(){const B=$("body");B.innerHTML="";
    if(!c)L.textContent="لا توجد سورة بهذا الاسم"};
   q.oninput=draw;draw();if(window.innerWidth>700)q.focus()}
  else if(tab=="j"){JP.forEach((p,i)=>B.appendChild(item("الجزء "+(i+1),"صفحة "+p,()=>show(p))))}
+ else if(tab=="a"){renderAyahTab(B)}
+ else if(tab=="q"){renderQuarters(B)}
  else if(tab=="p"){const q=document.createElement("input");q.id="pg";q.type="number";q.min=1;q.max=LAST;q.placeholder="رقم الصفحة (1 – 604)";B.appendChild(q);
   q.onkeydown=e=>{if(e.key=="Enter")show(+q.value)};
   B.appendChild(item("اذهب للصفحة","",()=>show(+q.value)));
@@ -195,7 +230,7 @@ function render(){const B=$("body");B.innerHTML="";
    d.appendChild(it);d.appendChild(x);B.appendChild(d)})}}
 /* تثبيت + عمل بدون إنترنت */
 let DP=null;addEventListener("beforeinstallprompt",e=>{e.preventDefault();DP=e});
-const OK2="mushaf_tf_ok_v1",OK="mushaf_offline_ok_v1",CN="mushaf-v1",WEB=/^https?:/.test(location.protocol);
+const OK2="mushaf_tf_ok_v2",OK="mushaf_offline_ok_v1",CN="mushaf-v1",WEB=/^https?:/.test(location.protocol);
 async function offlineAll(){
  if(!WEB||!("caches" in window))return;
  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
@@ -208,7 +243,7 @@ async function offlineAll(){
 if(WEB&&"serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").then(async()=>{await offlineAll();offlineT()}).catch(()=>{});
 async function offlineT(show){
  if(!WEB||!("caches" in window)||localStorage.getItem(OK2))return;
- const c=await caches.open(CN),bar=$("dl"),L=["map.js"];for(let k=1;k<=TS.length;k++)L.push("tf"+k+".json");let fail=0;
+ const c=await caches.open(CN),bar=$("dl"),L=["map.js","q.js"];for(let k=1;k<=TS.length;k++)L.push("tf"+k+".json");let fail=0;
  if(show)bar.style.display="block";
  for(let k=0;k<L.length;k++){if(show)bar.textContent="جاري تحميل التفسير… "+Math.round(k/L.length*100)+"%";
   try{if(!(await c.match(L[k]))){const r=await fetch(L[k]);if(!r.ok)throw 0;await c.put(L[k],r)}}catch(e){fail++}}
