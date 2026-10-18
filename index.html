@@ -33,6 +33,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 .del{color:#c0392b;border:0;background:none;font-size:18px;cursor:pointer}
 #dl{position:fixed;bottom:0;left:0;right:0;background:var(--g);color:#fff;text-align:center;padding:9px;font-size:13px;z-index:8;display:none}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#000c;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:9;display:none;max-width:90%;text-align:center}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:64%;background:#fffdf6;border-radius:16px 16px 0 0;box-shadow:0 -4px 18px #0004;z-index:7;display:none;flex-direction:column;direction:rtl}
+#sh{display:flex;align-items:center;gap:4px;padding:8px 10px;background:var(--g);color:#fff;border-radius:16px 16px 0 0}
+#sh b{flex:1;font-size:15px}
+#sh button{background:rgba(255,255,255,.2);border:0;color:#fff;min-width:34px;height:32px;border-radius:8px;font-size:16px;cursor:pointer}
+#sb{overflow:auto;padding:12px 14px 22px;line-height:2.05;white-space:pre-wrap;text-align:right}
+#sb .nt{font-size:12px;color:#777;margin-bottom:6px;white-space:normal}
 </style></head><body>
 <div id="bar">
  <button id="bIdx" title="الفهرس">☰</button>
@@ -49,8 +55,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
  <div id="tabs"><button data-t="s">السور</button><button data-t="j">الأجزاء</button><button data-t="p">صفحة</button><button data-t="m">العلامات</button><button data-t="o">⚙ خيارات</button></div>
  <div id="body"></div>
 </div>
+<div id="sheet"><div id="sh"><b id="st"></b><button id="sfm" title="تصغير الخط">أ-</button><button id="sfp" title="تكبير الخط">أ+</button><button id="sprv" title="الآية السابقة">›</button><button id="snx" title="الآية التالية">‹</button><button id="sx">✕</button></div><div id="sb"></div></div>
 <div id="toast"></div>
 <div id="dl"></div>
+<script src="map.js"></script>
 <script>
 const N=637,LAST=604;
 const SN="الفاتحة,البقرة,آل عمران,النساء,المائدة,الأنعام,الأعراف,الأنفال,التوبة,يونس,هود,يوسف,الرعد,إبراهيم,الحجر,النحل,الإسراء,الكهف,مريم,طه,الأنبياء,الحج,المؤمنون,النور,الفرقان,الشعراء,النمل,القصص,العنكبوت,الروم,لقمان,السجدة,الأحزاب,سبأ,فاطر,يس,الصافات,ص,الزمر,غافر,فصلت,الشورى,الزخرف,الدخان,الجاثية,الأحقاف,محمد,الفتح,الحجرات,ق,الذاريات,الطور,النجم,القمر,الرحمن,الواقعة,الحديد,المجادلة,الحشر,الممتحنة,الصف,الجمعة,المنافقون,التغابن,الطلاق,التحريم,الملك,القلم,الحاقة,المعارج,نوح,الجن,المزمل,المدثر,القيامة,الإنسان,المرسلات,النبأ,النازعات,عبس,التكوير,الانفطار,المطففين,الانشقاق,البروج,الطارق,الأعلى,الغاشية,الفجر,البلد,الشمس,الليل,الضحى,الشرح,التين,العلق,القدر,البينة,الزلزلة,العاديات,القارعة,التكاثر,العصر,الهمزة,الفيل,قريش,الماعون,الكوثر,الكافرون,النصر,المسد,الإخلاص,الفلق,الناس".split(",");
@@ -59,7 +67,7 @@ const JP=[1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,
 const $=id=>document.getElementById(id);
 const norm=s=>s.replace(/[\u064B-\u0652\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/^ال/,"").toLowerCase();
 const KEY="mushaf_madinah_v1";
-let S={page:1,marks:[],zi:2,awake:true,fill:true};
+let S={page:1,marks:[],zi:2,awake:true,fill:true,tf:true,fs:19};
 try{Object.assign(S,JSON.parse(localStorage.getItem(KEY)||"{}"))}catch(e){}
 S.marks=S.marks.filter(m=>m&&m.p).map(m=>{if(m.h===undefined){m.y=(m.y||0.5)-0.0227;m.h=0.0453}return m});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -120,6 +128,36 @@ V.addEventListener("touchstart",e=>{tx=e.touches[0].clientX;ty=e.touches[0].clie
 V.addEventListener("touchend",e=>{if(window.visualViewport&&visualViewport.scale>1.02)return;if(S.zi>2)return;
  const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
  if(Math.abs(dx)>70&&Math.abs(dy)<45)show(S.page+(dx>0?1:-1))},{passive:true});
+
+/* التفسير (السعدي) */
+const MM=window.MM||null,TS=[1,4,8,18,28,43,97],TP={};
+let CUM=[0],PSI=[];
+if(MM){MM.cnt.forEach(c=>CUM.push(CUM[CUM.length-1]+c));PSI=MM.ps.split(",").map(x=>{const[s,a]=x.split(":").map(Number);return CUM[s-1]+a-1});PSI.push(6236)}
+function sa(i){let s=1;while(s<114&&CUM[s]<=i)s++;return[s,i-CUM[s-1]+1]}
+function loadT(n){let k=0;TS.forEach((x,i)=>{if(x<=n)k=i});
+ if(!TP[k])TP[k]=fetch("tf"+(k+1)+".json").then(r=>{if(!r.ok)throw 0;return r.json()}).catch(e=>{delete TP[k];throw e});
+ return TP[k].then(o=>o[n])}
+function ayahAt(p,x,y){const d=MM.D[p-1];if(!d)return null;const m=d[0],ms=d[1],L=Math.round((y-m)/41.65);let c=0;
+ for(const q of ms){if(q[0]<L||(q[0]==L&&q[1]>x))c++}return Math.min(PSI[p-1]+c,PSI[p]-1)}
+let tcur=-1;
+function sheetShow(){$("sheet").style.display="flex"}
+function sheetHide(){$("sheet").style.display="none";tcur=-1}
+async function openT(i){if(i<0||i>6235)return;tcur=i;const[s,a]=sa(i),B=$("sb");
+ $("st").textContent="سورة "+SN[s-1]+" — آية "+a;B.style.fontSize=S.fs+"px";B.textContent="جاري التحميل…";sheetShow();
+ try{const g=await loadT(s);if(tcur!=i)return;const r=g.find(x=>a>=x[0]&&a<=x[1]);B.textContent="";
+  if(r&&r[0]!=r[1]){const n=document.createElement("div");n.className="nt";n.textContent="تفسير الآيات "+r[0]+" – "+r[1]+" (متصلة في التفسير)";B.appendChild(n)}
+  B.appendChild(document.createTextNode(r?r[2]:"لا يوجد تفسير لهذه الآية"));B.scrollTop=0}
+ catch(e){if(tcur==i)B.textContent="تعذّر تحميل التفسير — يحتاج اتصالًا بالإنترنت أول مرة فقط (أو اضغط «تحميل التفسير» من ⚙ خيارات)"}}
+function openList(p){const B=$("sb"),a=PSI[p-1],b=PSI[p];tcur=-1;$("st").textContent="اختر الآية لعرض تفسيرها";B.style.fontSize="16px";B.textContent="";
+ const w=document.createElement("div");w.style.cssText="display:flex;flex-wrap:wrap;gap:6px;white-space:normal";
+ for(let i=a;i<b;i++){const[s,n]=sa(i),x=document.createElement("button");x.className="it";x.style.cssText="width:auto;margin:0;padding:8px 12px";x.textContent=SN[s-1]+" "+n;x.onclick=()=>openT(i);w.appendChild(x)}
+ B.appendChild(w);sheetShow()}
+$("sx").onclick=sheetHide;$("sprv").onclick=()=>{if(tcur>=0)openT(tcur-1)};$("snx").onclick=()=>{if(tcur>=0)openT(tcur+1)};
+$("sfp").onclick=()=>{S.fs=Math.min(34,S.fs+2);$("sb").style.fontSize=S.fs+"px";save()};
+$("sfm").onclick=()=>{S.fs=Math.max(14,S.fs-2);$("sb").style.fontSize=S.fs+"px";save()};
+W.addEventListener("click",e=>{if(armed||!S.tf||!MM||S.page>LAST)return;const r=$("im").getBoundingClientRect();if(!r.width)return;
+ const x=(e.clientX-r.left)/r.width*640,y=(e.clientY-r.top)/r.height*920;
+ if(x<60||x>580||y<110||y>810)return;const i=ayahAt(S.page,x,y);if(i===null)openList(S.page);else openT(i)});
 /* الفهرس */
 let tab="s";
 function closePanel(){$("panel").style.display="none"}
@@ -145,6 +183,8 @@ function render(){const B=$("body");B.innerHTML="";
   if(WEB)B.appendChild(item("العمل بدون إنترنت",localStorage.getItem(OK)?"✅ جاهز":"⏳ لم يكتمل تحميل الصفحات بعد",()=>offlineAll()))}
  else if(tab=="o"){
   B.appendChild(item("☀ إبقاء الشاشة مضيئة",WLOK?(S.awake?"✅ مفعّل":"⬜ معطّل"):"غير مدعوم في هذا المتصفح",toggleAwake));
+  B.appendChild(item("📖 تفسير السعدي عند الضغط على الآية",S.tf?"✅ مفعّل":"⬜ معطّل",()=>{S.tf=!S.tf;save();render()}));
+  if(WEB)B.appendChild(item("⬇ تحميل التفسير للعمل بدون إنترنت",localStorage.getItem(OK2)?"✅ جاهز":"⏳ لم يكتمل",()=>{try{localStorage.removeItem(OK2)}catch(e){}offlineT(true)}));
   B.appendChild(item("📱 حجم الصفحة",S.fill?"ملء الشاشة":"الصفحة كاملة",toggleFill));
   const n=document.createElement("p");n.style.cssText="font-size:13px;color:#555;line-height:1.7;margin:10px 4px";
   n.textContent="ملء الشاشة: تكبير الصفحة بحيث يملأ النص عرض الشاشة (مع قص الزخرفة الخارجية). الصفحة كاملة: تظهر الصفحة بالكامل بزخرفتها.";B.appendChild(n)}
@@ -155,7 +195,7 @@ function render(){const B=$("body");B.innerHTML="";
    d.appendChild(it);d.appendChild(x);B.appendChild(d)})}}
 /* تثبيت + عمل بدون إنترنت */
 let DP=null;addEventListener("beforeinstallprompt",e=>{e.preventDefault();DP=e});
-const OK="mushaf_offline_ok_v1",CN="mushaf-v1",WEB=/^https?:/.test(location.protocol);
+const OK2="mushaf_tf_ok_v1",OK="mushaf_offline_ok_v1",CN="mushaf-v1",WEB=/^https?:/.test(location.protocol);
 async function offlineAll(){
  if(!WEB||!("caches" in window))return;
  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
@@ -165,7 +205,15 @@ async function offlineAll(){
   try{if(!(await c.match(u))){const r=await fetch(u);if(!r.ok)throw 0;await c.put(u,r)}}catch(e){fail++}}
  if(fail){bar.textContent="لم يكتمل التحميل — افتح التطبيق وأنت متصل بالإنترنت وسيكمل";setTimeout(()=>bar.style.display="none",7000)}
  else{try{localStorage.setItem(OK,"1")}catch(e){}bar.textContent="✅ المصحف جاهز للعمل بدون إنترنت";setTimeout(()=>bar.style.display="none",3500)}}
-if(WEB&&"serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").then(offlineAll).catch(()=>{});
+if(WEB&&"serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").then(async()=>{await offlineAll();offlineT()}).catch(()=>{});
+async function offlineT(show){
+ if(!WEB||!("caches" in window)||localStorage.getItem(OK2))return;
+ const c=await caches.open(CN),bar=$("dl"),L=["map.js"];for(let k=1;k<=TS.length;k++)L.push("tf"+k+".json");let fail=0;
+ if(show)bar.style.display="block";
+ for(let k=0;k<L.length;k++){if(show)bar.textContent="جاري تحميل التفسير… "+Math.round(k/L.length*100)+"%";
+  try{if(!(await c.match(L[k]))){const r=await fetch(L[k]);if(!r.ok)throw 0;await c.put(L[k],r)}}catch(e){fail++}}
+ if(!fail)try{localStorage.setItem(OK2,"1")}catch(e){}
+ if(show){bar.textContent=fail?"لم يكتمل تحميل التفسير — تأكد من الاتصال":"✅ التفسير جاهز بدون إنترنت";setTimeout(()=>bar.style.display="none",3000)}}
 /* إبقاء الشاشة مضيئة */
 let WL=null;const WLOK="wakeLock" in navigator;
 async function wakeOn(){if(!WLOK)return false;try{if(WL)return true;WL=await navigator.wakeLock.request("screen");WL.addEventListener("release",()=>{WL=null});return true}catch(e){WL=null;return false}}
