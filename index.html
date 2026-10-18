@@ -55,7 +55,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
  <div id="tabs"><button data-t="s">السور</button><button data-t="j">الأجزاء</button><button data-t="a">آية/كلمة</button><button data-t="q">الأرباع</button><button data-t="p">صفحة</button><button data-t="m">العلامات</button><button data-t="o">⚙ خيارات</button></div>
  <div id="body"></div>
 </div>
-<div id="sheet"><div id="sh"><b id="st"></b><button id="sfm" title="تصغير الخط">أ-</button><button id="sfp" title="تكبير الخط">أ+</button><button id="sprv" title="الآية السابقة">›</button><button id="snx" title="الآية التالية">‹</button><button id="sx">✕</button></div><div id="sb"></div></div>
+<div id="sheet"><div id="sh"><b id="st"></b><button id="smk" title="علّم هنا: وقفت عند هذه الآية">📍</button><button id="sfm" title="تصغير الخط">أ-</button><button id="sfp" title="تكبير الخط">أ+</button><button id="sprv" title="الآية السابقة">›</button><button id="snx" title="الآية التالية">‹</button><button id="sx">✕</button></div><div id="sb"></div></div>
 <div id="toast"></div>
 <div id="dl"></div>
 <script src="map.js"></script>
@@ -155,6 +155,15 @@ function openList(p){const B=$("sb"),a=PSI[p-1],b=PSI[p];tcur=-1;$("st").textCon
 $("sx").onclick=sheetHide;$("sprv").onclick=()=>{if(tcur>=0)openT(tcur-1)};$("snx").onclick=()=>{if(tcur>=0)openT(tcur+1)};
 $("sfp").onclick=()=>{S.fs=Math.min(34,S.fs+2);$("sb").style.fontSize=S.fs+"px";save()};
 $("sfm").onclick=()=>{S.fs=Math.max(14,S.fs-2);$("sb").style.fontSize=S.fs+"px";save()};
+
+function ayahSpan(i){const p=pageOf(i),d=MM.D[p-1];if(!d)return null;const m=d[0],ms=d[1],k=i-PSI[p-1];if(k<0||k>=ms.length)return null;
+ const eL=ms[k][0],sL=k==0?Math.round((C0*920-m)/41.65):ms[k-1][0],t=(m+sL*41.65)/920-PITCH/2;
+ return{p,y:Math.max(0,t),h:(eL-sL+1)*41.65/920,i}}
+async function markAyah(i){const sp=ayahSpan(i);if(!sp)return toast("تعذّر تحديد موضع هذه الآية — استخدم 📍 من الشريط العلوي");
+ if(sp.p!=S.page)await show(sp.p);sheetHide();
+ S.marks=S.marks.filter(m=>m.p!=sp.p);S.marks.unshift({p:sp.p,y:sp.y,h:sp.h,i:sp.i,t:Date.now()});S.marks=S.marks.slice(0,30);save();drawHl(1);
+ const[s,a]=sa(i);toast("تم حفظ مكان الوقوف: "+SN[s-1]+" آية "+a+" ✅")}
+$("smk").onclick=()=>{if(tcur>=0)markAyah(tcur)};
 W.addEventListener("click",e=>{if(armed||!S.tf||!MM||S.page>LAST)return;const r=$("im").getBoundingClientRect();if(!r.width)return;
  const x=(e.clientX-r.left)/r.width*640,y=(e.clientY-r.top)/r.height*920;
  if(x<60||x>580||y<110||y>810)return;const i=ayahAt(S.page,x,y);if(i===null)openList(S.page);else openT(i)});
@@ -225,7 +234,7 @@ function render(){const B=$("body");B.innerHTML="";
   n.textContent="ملء الشاشة: تكبير الصفحة بحيث يملأ النص عرض الشاشة (مع قص الزخرفة الخارجية). الصفحة كاملة: تظهر الصفحة بالكامل بزخرفتها.";B.appendChild(n)}
  else{if(!S.marks.length){B.textContent="لا توجد علامات بعد. اضغط 📍 ثم اضغط على مكان الآية التي وقفت عندها."}
   S.marks.forEach((m,i)=>{const d=document.createElement("div");d.style.display="flex";
-   const it=item((i==0?"⭐ ":"")+surahsOf(m.p)[0]+" — صفحة "+m.p,new Date(m.t).toLocaleDateString("ar-EG"),()=>show(m.p,true));it.style.flex="1";
+   const it=item((i==0?"⭐ ":"")+(m.i!==undefined&&MM?(()=>{const q=sa(m.i);return"سورة "+SN[q[0]-1]+" — آية "+q[1]})():surahsOf(m.p)[0])+" — صفحة "+m.p,new Date(m.t).toLocaleDateString("ar-EG"),()=>show(m.p,true));it.style.flex="1";
    const x=document.createElement("button");x.className="del";x.textContent="✕";x.onclick=()=>{S.marks.splice(i,1);save();render()};
    d.appendChild(it);d.appendChild(x);B.appendChild(d)})}}
 /* تثبيت + عمل بدون إنترنت */
