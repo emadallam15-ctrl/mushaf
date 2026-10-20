@@ -23,8 +23,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #hl{position:absolute;display:none;left:9%;width:82%;background:rgba(255,196,0,.45);mix-blend-mode:multiply;border-radius:4px;pointer-events:none}
 #wrap.arm{touch-action:none;cursor:crosshair;outline:3px dashed #e0a800;outline-offset:-3px}
 #panel{position:fixed;top:48px;left:0;right:0;bottom:0;background:var(--bg);z-index:5;display:none;flex-direction:column}
-#tabs{display:flex;background:#e4dcc6}
-#tabs button{flex:1;padding:11px 0;border:0;background:none;font-size:12.5px;cursor:pointer}
+#tabs{display:flex;background:#e4dcc6;overflow-x:auto}
+#tabs button{flex:1 0 auto;padding:11px 9px;border:0;background:none;font-size:13px;cursor:pointer;white-space:nowrap}
 #tabs button.on{background:var(--g);color:#fff}
 #body{flex:1;overflow:auto;padding:10px}
 #q,#pg{width:100%;font-size:18px;padding:10px;border:2px solid var(--g);border-radius:10px;margin-bottom:10px}
@@ -200,6 +200,30 @@ function renderAyahTab(B){
 async function renderQuarters(B){B.textContent="جاري التحميل…";let Q;try{Q=await loadQ()}catch(e){B.textContent="تعذّر تحميل البيانات";return}
  B.textContent="";Q.h.forEach((x,i)=>{const[s,a]=x.split(":").map(Number),idx=CUM[s-1]+a-1,j=(i>>3)+1,hz=(i>>2)+1;
   const it=item("الجزء "+j+" — الحزب "+hz+" — "+QN[i&3],SN[s-1]+" "+a+" · ص"+pageOf(idx),()=>show(pageOf(idx)));B.appendChild(it)})}
+
+/* الأدعية والأذكار (حصن المسلم) */
+let ADP=null,dsel=null;
+function loadAD(){if(window.AD)return Promise.resolve(window.AD);
+ if(!ADP)ADP=new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="ad.js";sc.onload=()=>ok(window.AD);sc.onerror=()=>{ADP=null;no()};document.head.appendChild(sc)});return ADP}
+async function renderDua(B){B.textContent="جاري التحميل…";let A;try{A=await loadAD()}catch(e){B.textContent="تعذّر تحميل الأدعية — يحتاج اتصالًا مرة واحدة";return}
+ B.textContent="";
+ if(dsel!==null){const c=A[dsel];
+  B.appendChild(item("‹ رجوع للأدعية","",()=>{dsel=null;render()}));
+  const h=document.createElement("h3");h.textContent=c.n;h.style.cssText="margin:10px 4px;color:var(--g)";B.appendChild(h);
+  if(c.note){const n=document.createElement("p");n.textContent=c.note;n.style.cssText="font-size:13px;color:#555;line-height:1.8;margin:0 4px 10px;background:#fff6dd;padding:8px;border-radius:8px";B.appendChild(n)}
+  c.a.forEach(x=>{const d=document.createElement("div");d.style.cssText="background:#fff;border:1px solid #cfc6ad;border-radius:10px;padding:12px 14px;margin-bottom:8px;line-height:2.1;font-size:19px;text-align:right";
+   d.textContent=x[0];if(x[1]>1){const b=document.createElement("div");b.textContent="التكرار: "+x[1]+" مرات";b.style.cssText="font-size:13px;color:var(--g);margin-top:4px";d.appendChild(b)}B.appendChild(d)});
+  B.scrollTop=0;return}
+ B.appendChild(item("‹ رجوع للخيارات","",()=>openPanel("o")));
+ const q=document.createElement("input");q.id="q";q.placeholder="ابحث في الأدعية والأذكار…";B.appendChild(q);
+ const L=document.createElement("div");B.appendChild(L);
+ const fav=["دعاء ختم القرآن","أذكار الصباح والمساء","دعاء السفر","دعاء صلاة الاستخارة"];
+ const draw=()=>{L.innerHTML="";const k=norm(q.value.trim());
+  if(!k){const t=document.createElement("div");t.textContent="⭐ الأكثر استخدامًا";t.style.cssText="margin:4px 4px 8px;font-weight:bold";L.appendChild(t);
+   fav.forEach(n=>{const i=A.findIndex(c=>c.n==n);if(i>=0)L.appendChild(item(n,"",()=>{dsel=i;render()}))});
+   const t2=document.createElement("div");t2.textContent="📚 كل أبواب حصن المسلم";t2.style.cssText="margin:12px 4px 8px;font-weight:bold";L.appendChild(t2)}
+  A.forEach((c,i)=>{if(!k||norm(c.n).includes(k)||c.a.some(x=>norm(x[0]).includes(k)))L.appendChild(item(c.n,c.a.length+" ",()=>{dsel=i;render()}))})};
+ q.oninput=draw;draw()}
 /* الفهرس */
 let tab="s";
 function closePanel(){$("panel").style.display="none"}
@@ -216,6 +240,7 @@ function render(){const B=$("body");B.innerHTML="";
    if(!c)L.textContent="لا توجد سورة بهذا الاسم"};
   q.oninput=draw;draw();if(window.innerWidth>700)q.focus()}
  else if(tab=="j"){JP.forEach((p,i)=>B.appendChild(item("الجزء "+(i+1),"صفحة "+p,()=>show(p))))}
+ else if(tab=="d"){renderDua(B)}
  else if(tab=="a"){renderAyahTab(B)}
  else if(tab=="q"){renderQuarters(B)}
  else if(tab=="p"){const q=document.createElement("input");q.id="pg";q.type="number";q.min=1;q.max=LAST;q.placeholder="رقم الصفحة (1 – 604)";B.appendChild(q);
@@ -227,6 +252,7 @@ function render(){const B=$("body");B.innerHTML="";
   if(WEB)B.appendChild(item("العمل بدون إنترنت",localStorage.getItem(OK)?"✅ جاهز":"⏳ لم يكتمل تحميل الصفحات بعد",()=>offlineAll()))}
  else if(tab=="o"){
   B.appendChild(item("☀ إبقاء الشاشة مضيئة",WLOK?(S.awake?"✅ مفعّل":"⬜ معطّل"):"غير مدعوم في هذا المتصفح",toggleAwake));
+  B.appendChild(item("🤲 الأدعية والأذكار","ختم القرآن · الصباح والمساء · السفر · الاستخارة…",()=>{dsel=null;openPanel("d")}));
   B.appendChild(item("📖 تفسير السعدي عند الضغط على الآية",S.tf?"✅ مفعّل":"⬜ معطّل",()=>{S.tf=!S.tf;save();render()}));
   if(WEB)B.appendChild(item("⬇ تحميل التفسير للعمل بدون إنترنت",localStorage.getItem(OK2)?"✅ جاهز":"⏳ لم يكتمل",()=>{try{localStorage.removeItem(OK2)}catch(e){}offlineT(true)}));
   B.appendChild(item("📱 حجم الصفحة",S.fill?"ملء الشاشة":"الصفحة كاملة",toggleFill));
@@ -239,7 +265,7 @@ function render(){const B=$("body");B.innerHTML="";
    d.appendChild(it);d.appendChild(x);B.appendChild(d)})}}
 /* تثبيت + عمل بدون إنترنت */
 let DP=null;addEventListener("beforeinstallprompt",e=>{e.preventDefault();DP=e});
-const OK2="mushaf_tf_ok_v2",OK="mushaf_offline_ok_v1",CN="mushaf-v1",WEB=/^https?:/.test(location.protocol);
+const OK2="mushaf_tf_ok_v3",OK="mushaf_offline_ok_v1",CN="mushaf-v1",WEB=/^https?:/.test(location.protocol);
 async function offlineAll(){
  if(!WEB||!("caches" in window))return;
  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
@@ -252,7 +278,7 @@ async function offlineAll(){
 if(WEB&&"serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").then(async()=>{await offlineAll();offlineT()}).catch(()=>{});
 async function offlineT(show){
  if(!WEB||!("caches" in window)||localStorage.getItem(OK2))return;
- const c=await caches.open(CN),bar=$("dl"),L=["map.js","q.js"];for(let k=1;k<=TS.length;k++)L.push("tf"+k+".json");let fail=0;
+ const c=await caches.open(CN),bar=$("dl"),L=["map.js","q.js","ad.js"];for(let k=1;k<=TS.length;k++)L.push("tf"+k+".json");let fail=0;
  if(show)bar.style.display="block";
  for(let k=0;k<L.length;k++){if(show)bar.textContent="جاري تحميل التفسير… "+Math.round(k/L.length*100)+"%";
   try{if(!(await c.match(L[k]))){const r=await fetch(L[k]);if(!r.ok)throw 0;await c.put(L[k],r)}}catch(e){fail++}}
