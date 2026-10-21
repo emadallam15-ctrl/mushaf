@@ -39,6 +39,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #sh button{background:rgba(255,255,255,.2);border:0;color:#fff;min-width:34px;height:32px;border-radius:8px;font-size:16px;cursor:pointer}
 #sb{overflow:auto;padding:12px 14px 22px;line-height:2.05;white-space:pre-wrap;text-align:right}
 #sb .nt{font-size:12px;color:#777;margin-bottom:6px;white-space:normal}
+#sheet{bottom:var(--pb,0)}
+#pl{position:fixed;left:0;right:0;bottom:0;background:#12372b;color:#fff;z-index:8;display:none;padding:6px 8px 8px;direction:rtl}
+#pl .r{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap;font-size:12.5px}
+#pl .r1{margin-top:0}
+#pt{flex:1;font-size:13.5px;min-width:0}
+#pl button{background:rgba(255,255,255,.18);border:0;color:#fff;min-width:38px;height:34px;border-radius:8px;font-size:16px;cursor:pointer}
+#pl select{background:#fff;color:#000;border:0;border-radius:6px;padding:4px;font-size:13px}
+#phl{position:absolute;display:none;left:9%;width:82%;background:rgba(30,150,255,.28);mix-blend-mode:multiply;border-radius:4px;pointer-events:none}
 </style></head><body>
 <div id="bar">
  <button id="bIdx" title="الفهرس">☰</button>
@@ -50,12 +58,15 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
  <button id="bZo" title="تصغير">−</button>
  <button id="bZi" title="تكبير">+</button>
 </div>
-<div id="view"><div id="wrap"><img id="im" alt=""><div id="hl"></div></div></div>
+<div id="view"><div id="wrap"><img id="im" alt=""><div id="hl"></div><div id="phl"></div></div></div>
 <div id="panel">
  <div id="tabs"><button data-t="s">السور</button><button data-t="j">الأجزاء</button><button data-t="a">آية/كلمة</button><button data-t="q">الأرباع</button><button data-t="p">صفحة</button><button data-t="m">العلامات</button><button data-t="o">⚙ خيارات</button></div>
  <div id="body"></div>
 </div>
-<div id="sheet"><div id="sh"><b id="st"></b><button id="smk" title="علّم هنا: وقفت عند هذه الآية">📍</button><button id="sfm" title="تصغير الخط">أ-</button><button id="sfp" title="تكبير الخط">أ+</button><button id="sprv" title="الآية السابقة">›</button><button id="snx" title="الآية التالية">‹</button><button id="sx">✕</button></div><div id="sb"></div></div>
+<div id="sheet"><div id="sh"><b id="st"></b><button id="smk" title="علّم هنا: وقفت عند هذه الآية">📍</button><button id="spl" title="استمع للآية">▶</button><button id="sfm" title="تصغير الخط">أ-</button><button id="sfp" title="تكبير الخط">أ+</button><button id="sprv" title="الآية السابقة">›</button><button id="snx" title="الآية التالية">‹</button><button id="sx">✕</button></div><div id="sb"></div></div>
+<div id="pl"><div class="r r1"><span id="pt"></span><button id="pprv" title="الآية السابقة">⏮</button><button id="ppp">⏸</button><button id="pnx" title="الآية التالية">⏭</button><button id="pmore">⚙</button><button id="px">✕</button></div>
+<div class="r" id="pr2" style="display:none"><span>كل آية</span><select id="par"></select><span>المقطع</span><select id="prr"></select><button id="prs" style="min-width:auto;padding:0 8px;font-size:13px">[ بداية</button><button id="pre" style="min-width:auto;padding:0 8px;font-size:13px">نهاية ]</button><button id="pclr" style="min-width:auto;padding:0 8px;font-size:13px">إلغاء المقطع</button></div>
+<div class="r" id="pr3" style="display:none"><span>السرعة</span><select id="prate"></select><span>فاصل</span><select id="pgap"></select><span>القارئ</span><select id="prc"></select></div></div>
 <div id="toast"></div>
 <div id="dl"></div>
 <script src="map.js"></script>
@@ -67,7 +78,7 @@ const JP=[1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,
 const $=id=>document.getElementById(id);
 const norm=s=>s.replace(/[\u064B-\u0652\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/^ال/,"").toLowerCase();
 const KEY="mushaf_madinah_v1";
-let S={page:1,marks:[],zi:2,awake:true,fill:true,tf:true,fs:19};
+let S={page:1,marks:[],zi:2,awake:true,fill:true,tf:true,fs:19,rc:"Minshawy_Murattal_128kbps",rate:1,ar:1,rr:1,gap:0};
 try{Object.assign(S,JSON.parse(localStorage.getItem(KEY)||"{}"))}catch(e){}
 S.marks=S.marks.filter(m=>m&&m.p).map(m=>{if(m.h===undefined){m.y=(m.y||0.5)-0.0227;m.h=0.0453}return m});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -99,7 +110,7 @@ let tok=0;
 async function show(p,focus){
  p=Math.max(1,Math.min(N,p|0||1));S.page=p;const my=++tok,im=$("im");
  im.onload=()=>{const has=S.marks.some(m=>m.p==p);drawHl(focus);if(!(focus&&has))$("view").scrollTop=0};
- $("hl").style.display="none";
+ $("hl").style.display="none";$("phl").style.display="none";
  $("ttl").innerHTML=surahsOf(p).join("، ")+"<br>"+(p>LAST?"صفحة ملحق "+(p-LAST):"الجزء "+juzOf(p)+" · صفحة "+p);
  save();closePanel();
  if(im.dataset.p==String(p))im.onload();
@@ -224,6 +235,70 @@ async function renderDua(B){B.textContent="جاري التحميل…";let A;try
    const t2=document.createElement("div");t2.textContent="📚 كل أبواب حصن المسلم";t2.style.cssText="margin:12px 4px 8px;font-weight:bold";L.appendChild(t2)}
   A.forEach((c,i)=>{if(!k||norm(c.n).includes(k)||c.a.some(x=>norm(x[0]).includes(k)))L.appendChild(item(c.n,c.a.length+" ",()=>{dsel=i;render()}))})};
  q.oninput=draw;draw()}
+
+/* التلاوة والتكرار للحفظ (everyayah.com) */
+const RC=[["Minshawy_Murattal_128kbps","المنشاوي (مرتل)"],["Saood_ash-Shuraym_128kbps","سعود الشريم"]],AUC="mushaf-audio-v1";
+const p3=n=>String(n).padStart(3,"0");
+function aurl(i,rc){const q=sa(i);return"https://everyayah.com/data/"+(rc||S.rc)+"/"+p3(q[0])+p3(q[1])+".mp3"}
+async function srcFor(i){try{if("caches" in window){const c=await caches.open(AUC),r=await c.match(aurl(i));if(r)return URL.createObjectURL(await r.blob())}}catch(e){}return aurl(i)}
+const AU=new Audio();AU.preload="auto";let P=null;
+const ayLabel=i=>{const q=sa(i);return"سورة "+SN[q[0]-1]+" — آية "+q[1]};
+function rngTxt(){return P&&P.rs!==null?" · المقطع: "+sa(P.rs)[1]+(P.re!==null?" – "+sa(P.re)[1]:" – …"):""}
+function setPT(){if(!P)return;$("pt").textContent=ayLabel(P.i)+rngTxt()}
+function setPlayIcon(){$("ppp").textContent=AU.paused?"▶":"⏸"}
+function showPl(){$("pl").style.display="block";document.body.style.setProperty("--pb",$("pl").offsetHeight+"px")}
+async function focusAyah(i){const p=pageOf(i);if(p!=S.page)await show(p);if(!P||P.i!=i)return;const sp=ayahSpan(i),h=$("phl");
+ if(!sp){h.style.display="none";return}h.style.display="block";h.style.top=(sp.y*100)+"%";h.style.height=(sp.h*100)+"%";
+ setTimeout(()=>{const im=$("im"),v=$("view"),y=sp.y*im.clientHeight;if(y<v.scrollTop||y+sp.h*im.clientHeight>v.scrollTop+v.clientHeight-170)v.scrollTop=Math.max(0,y-v.clientHeight/4)},350)}
+function mediaMeta(i){try{if("mediaSession" in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:ayLabel(i),artist:(RC.find(r=>r[0]==S.rc)||RC[0])[1],album:"مصحف المدينة"});
+ const ms=navigator.mediaSession;ms.setActionHandler("play",()=>AU.play());ms.setActionHandler("pause",()=>AU.pause());ms.setActionHandler("nexttrack",()=>stepAyah(1));ms.setActionHandler("previoustrack",()=>stepAyah(-1))}}catch(e){}}
+async function playAyah(i){if(!P||i<0||i>6235)return;P.i=i;const my=++P.run;showPl();setPT();focusAyah(i);
+ const src=await srcFor(i);if(!P||my!=P.run){if(src.startsWith("blob:"))URL.revokeObjectURL(src);return}
+ if(P.obj){URL.revokeObjectURL(P.obj);P.obj=null}if(src.startsWith("blob:"))P.obj=src;
+ AU.src=src;AU.defaultPlaybackRate=S.rate;AU.playbackRate=S.rate;
+ try{await AU.play()}catch(e){if(P&&my==P.run)toast("تعذّر تشغيل الصوت — تأكد من الاتصال بالإنترنت")}
+ setPlayIcon();mediaMeta(i)}
+function startPlay(i){stopPlay(false,true);P={i,al:S.ar,rl:S.rr,rs:null,re:null,run:0,obj:null};if(S.awake)wakeOn();playAyah(i)}
+function stopPlay(done,quiet){try{AU.pause()}catch(e){}if(P&&P.obj)URL.revokeObjectURL(P.obj);P=null;$("pl").style.display="none";document.body.style.setProperty("--pb","0px");$("phl").style.display="none";if(done&&!quiet)toast("انتهت التلاوة ✅")}
+function stepAyah(d){if(!P)return;P.al=S.ar;playAyah(Math.max(0,Math.min(6235,P.i+d)))}
+function adv(my){if(!P||P.run!=my)return;
+ if(P.al>1){P.al--;return playAyah(P.i)}
+ const i=P.i;
+ if(P.re!==null&&i>=P.re){if(P.rl===0||P.rl>1){if(P.rl)P.rl--;P.al=S.ar;return playAyah(P.rs)}return stopPlay(true)}
+ const n=i+1;if(n>6235||sa(n)[0]!=sa(i)[0])return stopPlay(true);
+ P.al=S.ar;playAyah(n)}
+AU.onended=()=>{if(!P)return;const my=P.run,g=S.gap?Math.round((AU.duration||2)*1000*S.gap):0;g?setTimeout(()=>adv(my),g):adv(my)};
+AU.onpause=setPlayIcon;AU.onplay=setPlayIcon;
+AU.onerror=()=>{if(P&&AU.src)toast("تعذّر تحميل الصوت — تأكد من الاتصال بالإنترنت")};
+$("ppp").onclick=()=>{if(!P)return;AU.paused?AU.play().catch(()=>{}):AU.pause()};
+$("pnx").onclick=()=>stepAyah(1);$("pprv").onclick=()=>stepAyah(-1);$("px").onclick=()=>stopPlay(false);
+$("pmore").onclick=()=>{const a=$("pr2"),b=$("pr3"),on=a.style.display=="none";a.style.display=b.style.display=on?"flex":"none";showPl()};
+$("prs").onclick=()=>{if(!P)return;P.rs=P.i;if(P.re!==null&&P.re<P.rs)P.re=null;setPT();toast("بداية المقطع: آية "+sa(P.i)[1])};
+$("pre").onclick=()=>{if(!P)return;if(P.rs===null)P.rs=P.i;if(P.i<P.rs){P.rs=P.i}P.re=P.i;setPT();toast("نهاية المقطع: آية "+sa(P.i)[1]+" — سيُكرَّر المقطع")};
+$("pclr").onclick=()=>{if(!P)return;P.rs=P.re=null;setPT();toast("أُلغي المقطع")};
+function fillSel(id,opts,cur,fn){const e=$(id);e.innerHTML="";opts.forEach(o=>{const x=document.createElement("option");x.value=o[0];x.textContent=o[1];if(String(o[0])==String(cur))x.selected=true;e.appendChild(x)});e.onchange=()=>{fn(e.value);save()}}
+fillSel("par",[[1,"×1"],[2,"×2"],[3,"×3"],[5,"×5"],[7,"×7"],[10,"×10"]],S.ar,v=>{S.ar=+v;if(P)P.al=S.ar});
+fillSel("prr",[[1,"مرة"],[2,"×2"],[3,"×3"],[5,"×5"],[10,"×10"],[0,"∞ بلا نهاية"]],S.rr,v=>{S.rr=+v;if(P)P.rl=S.rr});
+fillSel("prate",[[0.75,"0.75×"],[1,"1×"],[1.25,"1.25×"],[1.5,"1.5×"]],S.rate,v=>{S.rate=+v;AU.defaultPlaybackRate=AU.playbackRate=S.rate});
+fillSel("pgap",[[0,"بدون"],[1,"بقدر الآية (للترديد)"],[0.5,"نصف مدة الآية"]],S.gap,v=>{S.gap=+v});
+fillSel("prc",RC,S.rc,v=>{S.rc=v;if(P)playAyah(P.i)});
+$("spl").onclick=()=>{if(tcur<0)return;const i=tcur;sheetHide();startPlay(i)};
+async function dlSurah(s,box){const n=MM.cnt[s-1],c=await caches.open(AUC),base=CUM[s-1];let done=0,fail=0,next=0;box.textContent="جاري التحميل 0%";
+ async function w(){while(next<n){const i=base+next++;const u=aurl(i);try{if(!(await c.match(u))){const r=await fetch(u);if(!r.ok)throw 0;await c.put(u,r)}}catch(e){fail++}done++;box.textContent="جاري التحميل "+Math.round(done/n*100)+"%"}}
+ await Promise.all([w(),w(),w(),w()]);box.textContent=fail?"اكتمل مع "+fail+" ملف فاشل — أعد المحاولة":"✅ تم تحميل السورة للاستخدام بدون نت"}
+async function renderRecite(B){
+ B.appendChild(item("‹ رجوع للخيارات","",()=>openPanel("o")));
+ const h=document.createElement("h3");h.textContent="🎧 التلاوة والتكرار للحفظ";h.style.cssText="margin:10px 4px;color:var(--g)";B.appendChild(h);
+ const n=document.createElement("p");n.style.cssText="font-size:13px;color:#555;line-height:1.8;margin:0 4px 10px";
+ n.textContent="اضغط على أي آية في الصفحة ثم ▶ لتبدأ التلاوة من عندها. من شريط التشغيل (⚙) اضبط تكرار الآية، وحدّد مقطعًا (بداية ونهاية) وكرّره عدد مرات، مع سرعة وفاصل للترديد. الصوت يُبَثّ من الإنترنت.";B.appendChild(n);
+ RC.forEach(r=>B.appendChild(item("🎙 "+r[1],S.rc==r[0]?"✅ المختار":"",()=>{S.rc=r[0];save();fillSel("prc",RC,S.rc,v=>{S.rc=v;if(P)playAyah(P.i)});render()})));
+ if(MM&&S.page<=LAST)B.appendChild(item("▶ ابدأ من أول الصفحة الحالية","صفحة "+S.page,()=>{closePanel();startPlay(PSI[S.page-1])}));
+ const sel=document.createElement("select");sel.style.cssText="width:100%;font-size:17px;padding:9px;border:2px solid var(--g);border-radius:10px;margin:12px 0 6px";
+ SN.forEach((x,i)=>{const o=document.createElement("option");o.value=i+1;o.textContent=(i+1)+". "+x;sel.appendChild(o)});B.appendChild(sel);
+ const st=document.createElement("div");st.style.cssText="font-size:13px;color:var(--g);margin:2px 4px 8px";
+ B.appendChild(item("⬇ تحميل السورة المختارة للاستخدام بدون نت","",async()=>{if(!MM||!("caches" in window))return;await dlSurah(+sel.value,st)}));B.appendChild(st);
+ B.appendChild(item("🗑 حذف كل الصوت المحمّل","",async()=>{try{await caches.delete(AUC);toast("تم حذف الصوت المحمّل")}catch(e){}}));
+}
 /* الفهرس */
 let tab="s";
 function closePanel(){$("panel").style.display="none"}
@@ -241,6 +316,7 @@ function render(){const B=$("body");B.innerHTML="";
   q.oninput=draw;draw();if(window.innerWidth>700)q.focus()}
  else if(tab=="j"){JP.forEach((p,i)=>B.appendChild(item("الجزء "+(i+1),"صفحة "+p,()=>show(p))))}
  else if(tab=="d"){renderDua(B)}
+ else if(tab=="r"){renderRecite(B)}
  else if(tab=="a"){renderAyahTab(B)}
  else if(tab=="q"){renderQuarters(B)}
  else if(tab=="p"){const q=document.createElement("input");q.id="pg";q.type="number";q.min=1;q.max=LAST;q.placeholder="رقم الصفحة (1 – 604)";B.appendChild(q);
@@ -252,6 +328,7 @@ function render(){const B=$("body");B.innerHTML="";
   if(WEB)B.appendChild(item("العمل بدون إنترنت",localStorage.getItem(OK)?"✅ جاهز":"⏳ لم يكتمل تحميل الصفحات بعد",()=>offlineAll()))}
  else if(tab=="o"){
   B.appendChild(item("☀ إبقاء الشاشة مضيئة",WLOK?(S.awake?"✅ مفعّل":"⬜ معطّل"):"غير مدعوم في هذا المتصفح",toggleAwake));
+  B.appendChild(item("🎧 التلاوة والتكرار للحفظ","المنشاوي · الشريم",()=>openPanel("r")));
   B.appendChild(item("🤲 الأدعية والأذكار","ختم القرآن · الصباح والمساء · السفر · الاستخارة…",()=>{dsel=null;openPanel("d")}));
   B.appendChild(item("📖 تفسير السعدي عند الضغط على الآية",S.tf?"✅ مفعّل":"⬜ معطّل",()=>{S.tf=!S.tf;save();render()}));
   if(WEB)B.appendChild(item("⬇ تحميل التفسير للعمل بدون إنترنت",localStorage.getItem(OK2)?"✅ جاهز":"⏳ لم يكتمل",()=>{try{localStorage.removeItem(OK2)}catch(e){}offlineT(true)}));
