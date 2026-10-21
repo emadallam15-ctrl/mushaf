@@ -299,6 +299,35 @@ async function renderRecite(B){
  B.appendChild(item("⬇ تحميل السورة المختارة للاستخدام بدون نت","",async()=>{if(!MM||!("caches" in window))return;await dlSurah(+sel.value,st)}));B.appendChild(st);
  B.appendChild(item("🗑 حذف كل الصوت المحمّل","",async()=>{try{await caches.delete(AUC);toast("تم حذف الصوت المحمّل")}catch(e){}}));
 }
+
+/* حول البرنامج */
+function renderAbout(B){
+ B.appendChild(item("‹ رجوع للخيارات","",()=>openPanel("o")));
+ const d=document.createElement("div");d.style.cssText="line-height:2;font-size:16px;padding:4px 6px 30px;text-align:right";
+ d.innerHTML=`<h2 style="color:var(--g);margin:10px 0 2px;text-align:center">مصحف المدينة</h2>
+<p style="text-align:center;color:#555;margin:0 0 14px;font-size:14px">مصحف + تفسير + تلاوة + أذكار — يعمل بدون إنترنت</p>
+<div style="background:#fff;border:1px solid #cfc6ad;border-radius:12px;padding:12px 14px;margin-bottom:12px;text-align:center">
+<div style="color:#555;font-size:14px">فكرة وإعداد</div><div style="font-weight:bold;font-size:19px">العبد الفقير عماد علام</div>
+<div style="margin-top:10px;color:var(--g);font-weight:bold">صدقة جارية عن عموم آل علام وآل عيطة</div>
+<div style="margin-top:6px;font-size:14px">اللهم تقبّل منّا إنك أنت السميع العليم</div></div>
+<h3 style="color:var(--g);margin:14px 0 4px">المراجع والمصادر</h3>
+<ul style="margin:0;padding:0 18px 0 0;font-size:15px">
+<li><b>المصحف:</b> مصحف المدينة النبوية — برواية حفص عن عاصم، وعدد آياته 6236 على عدّ الكوفيين، كما في مقدمة المصحف نفسه (صفحات المقدمة والملاحق داخل التطبيق).</li>
+<li><b>التفسير:</b> «تيسير الكريم الرحمن في تفسير كلام المنان» للشيخ عبد الرحمن بن ناصر السعدي رحمه الله — النص من مستودع <span dir="ltr">spa5k/tafsir_api</span>.</li>
+<li><b>نص القرآن للبحث:</b> مشروع تنزيل <span dir="ltr">(tanzil.net)</span> عبر مستودع <span dir="ltr">risan/quran-json</span>.</li>
+<li><b>ترقيم الآيات على الصفحات والأجزاء والأرباع:</b> واجهة <span dir="ltr">AlQuran Cloud</span> <span dir="ltr">(alquran.cloud)</span> بما يوافق ترقيم مصحف المدينة، مع تحديد مواضع علامات نهاية الآيات في صور الصفحات آليًّا.</li>
+<li><b>الأذكار والأدعية:</b> «حصن المسلم» لسعيد بن علي بن وهف القحطاني — البيانات من مستودع <span dir="ltr">rn0x/Adhkar-json</span>.</li>
+<li><b>دعاء ختم القرآن:</b> صيغة متداولة في آخر المصاحف، ولم يرد عن النبي ﷺ دعاء مخصوص بنص معيّن عند الختم؛ فيجوز الدعاء بما تيسّر.</li>
+<li><b>التلاوات:</b> محمد صديق المنشاوي (مرتل) وسعود الشريم — الصوت يُبَثّ من موقع <span dir="ltr">everyayah.com</span>.</li>
+</ul>
+<h3 style="color:var(--g);margin:14px 0 4px">تنبيهات</h3>
+<ul style="margin:0;padding:0 18px 0 0;font-size:14.5px;color:#444">
+<li>تحديد الآية عند الضغط على الصفحة يتم آليًّا، وقد يخطئ في صفحات قليلة؛ وفي الصفحات التي لم يتحدد فيها الموضع تظهر قائمة بآيات الصفحة لتختار منها.</li>
+<li>التفسير والأذكار مأخوذة من مصادر منشورة على الإنترنت؛ ويُرجى مراجعة الأصول عند الحاجة.</li>
+<li>هذا العمل خالص لوجه الله تعالى، ولا يُقصد منه ربح.</li>
+</ul>
+<p style="text-align:center;margin-top:18px;color:#777;font-size:13px">اللهم اجعله خالصًا لوجهك الكريم، وانفع به</p>`;
+ B.appendChild(d)}
 /* الفهرس */
 let tab="s";
 function closePanel(){$("panel").style.display="none"}
@@ -315,6 +344,7 @@ function render(){const B=$("body");B.innerHTML="";
    if(!c)L.textContent="لا توجد سورة بهذا الاسم"};
   q.oninput=draw;draw();if(window.innerWidth>700)q.focus()}
  else if(tab=="j"){JP.forEach((p,i)=>B.appendChild(item("الجزء "+(i+1),"صفحة "+p,()=>show(p))))}
+ else if(tab=="ab"){renderAbout(B)}
  else if(tab=="d"){renderDua(B)}
  else if(tab=="r"){renderRecite(B)}
  else if(tab=="a"){renderAyahTab(B)}
@@ -334,7 +364,7 @@ function render(){const B=$("body");B.innerHTML="";
   if(WEB)B.appendChild(item("⬇ تحميل التفسير للعمل بدون إنترنت",localStorage.getItem(OK2)?"✅ جاهز":"⏳ لم يكتمل",()=>{try{localStorage.removeItem(OK2)}catch(e){}offlineT(true)}));
   B.appendChild(item("📱 حجم الصفحة",S.fill?"ملء الشاشة":"الصفحة كاملة",toggleFill));
   const n=document.createElement("p");n.style.cssText="font-size:13px;color:#555;line-height:1.7;margin:10px 4px";
-  n.textContent="ملء الشاشة: تكبير الصفحة بحيث يملأ النص عرض الشاشة (مع قص الزخرفة الخارجية). الصفحة كاملة: تظهر الصفحة بالكامل بزخرفتها.";B.appendChild(n)}
+  n.textContent="ملء الشاشة: تكبير الصفحة بحيث يملأ النص عرض الشاشة (مع قص الزخرفة الخارجية). الصفحة كاملة: تظهر الصفحة بالكامل بزخرفتها.";B.appendChild(n);B.appendChild(item("ℹ️ حول البرنامج","فكرة وإعداد · المراجع",()=>openPanel("ab")))}
  else{if(!S.marks.length){B.textContent="لا توجد علامات بعد. اضغط 📍 ثم اضغط على مكان الآية التي وقفت عندها."}
   S.marks.forEach((m,i)=>{const d=document.createElement("div");d.style.display="flex";
    const it=item((i==0?"⭐ ":"")+(m.i!==undefined&&MM?(()=>{const q=sa(m.i);return"سورة "+SN[q[0]-1]+" — آية "+q[1]})():surahsOf(m.p)[0])+" — صفحة "+m.p,new Date(m.t).toLocaleDateString("ar-EG"),()=>show(m.p,true));it.style.flex="1";
